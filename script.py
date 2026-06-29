@@ -13,6 +13,7 @@ df = pd.read_csv('/Users/benjamingillingham/Desktop/blue_bikes_project/202505-bl
 df['started_at'] = pd.to_datetime(df['started_at'])
 df['ended_at'] = pd.to_datetime(df['ended_at'])
 df['time_length'] = df['ended_at'] - df['started_at']
+df['time_length'] = pd.to_timedelta(df['time_length'])
 
 df = df[df['end_station_name'].notna()]
 
@@ -27,6 +28,8 @@ common_rides = df.groupby(['start_station_name', 'start_lat', 'start_lng', 'end_
 common_rides.columns = [*common_rides.columns[:-1], 'ride_count']
 top10_common = common_rides.sort_values('ride_count', ascending=False).head(10)
 hour_started = pd.to_datetime(df.started_at).dt.hour
+
+print(df)
 
 def haversine(lon1, lat1, lon2, lat2):
     """
@@ -180,7 +183,7 @@ def common_routes_map():
     fig_all.update_layout(title='Top 10 common routes in May 2025', map=dict(zoom=1),
                           height=1200,
                           width=2000)
-    #fig_all.show()
+    fig_all.show()
 
 #Most common routes starting from our nearest station
 def union_square_destination():
@@ -295,17 +298,71 @@ def common_long_distance_routes():
     question_break()
     print('What are the most popular routes that are at least 6km?')
     long_distance_rides = df[df['distance'] >= 6]
-    long_distance_rides = long_distance_rides.groupby(['start_station_name','end_station_name','distance'])['member_casual'].count().sort_values(ascending=False).head(5).reset_index()
+    long_distance_rides = long_distance_rides.groupby(['start_station_name','start_lat','start_lng','end_station_name','end_lng','end_lat','distance'])['member_casual'].count().sort_values(ascending=False).head(5).reset_index()
+    long_distance_rides.columns = [*long_distance_rides.columns[:-1], 'ride_count']
     print(long_distance_rides)
+    fig_start = px.scatter_map(data_frame=long_distance_rides, lat="start_lat", lon="start_lng",
+                               text="start_station_name",
+                               zoom=15, height=800, width=800, hover_data=['start_station_name'])
 
-#Popular short distance rides- map these
+    fig_end = px.scatter_map(data_frame=long_distance_rides, lat="end_lat", lon="end_lng", text="end_station_name",
+                             zoom=15, height=800, width=800, hover_data=['end_station_name'])
+
+    fig_all = go.Figure(data=fig_start.data + fig_end.data)
+
+    max_count = long_distance_rides["ride_count"].max()
+
+    for _, row in long_distance_rides.iterrows():
+        opacity = row["ride_count"] / max_count
+        fig_all.add_trace(go.Scattermap(
+            lat=[row["start_lat"], row["end_lat"]],
+            lon=[row["start_lng"], row["end_lng"]],
+            mode="lines",
+            line=dict(width=1 + 4 * opacity, color="blue"),
+            showlegend=False,
+            hovertext=f"{row['start_station_name']} --> {row['end_station_name']}<br>Total rides: {row['ride_count']}"
+        ))
+
+    fig_all.update_layout(title='Most Common Long Distance Routes', map=dict(zoom=1),
+                          height=1200,
+                          width=2000)
+    fig_all.show()
+
+#Popular short distance rides- map these, but filter out those with really long times as they are probably just hobby rides
 def common_short_distance_routes():
     question_break()
     print('What are the most popular routes that are at most 1/10 km?')
     short_distance_rides = df[df['distance'] <= 0.1]
+    short_distance_rides = short_distance_rides[short_distance_rides['time_length'] <= '3 min']
     short_distance_rides = short_distance_rides[short_distance_rides['start_station_name'] != short_distance_rides['end_station_name']]
-    short_distance_rides = short_distance_rides.groupby(['start_station_name','end_station_name','distance'])['member_casual'].count().sort_values(ascending=False).head(5).reset_index()
+    short_distance_rides = short_distance_rides.groupby(['start_station_name','start_lat','start_lng','end_station_name','end_lat','end_lng','distance'])['member_casual'].count().sort_values(ascending=False).head(5).reset_index()
+    short_distance_rides.columns = [*short_distance_rides.columns[:-1], 'ride_count']
     print(short_distance_rides)
+    fig_start = px.scatter_map(data_frame=short_distance_rides, lat="start_lat", lon="start_lng", text="start_station_name",
+                               zoom=15, height=800, width=800, hover_data=['start_station_name'])
+
+    fig_end = px.scatter_map(data_frame=short_distance_rides, lat="end_lat", lon="end_lng", text="end_station_name",
+                             zoom=15, height=800, width=800, hover_data=['end_station_name'])
+
+    fig_all = go.Figure(data=fig_start.data + fig_end.data)
+
+    max_count = short_distance_rides["ride_count"].max()
+
+    for _, row in short_distance_rides.iterrows():
+        opacity = row["ride_count"] / max_count
+        fig_all.add_trace(go.Scattermap(
+            lat=[row["start_lat"], row["end_lat"]],
+            lon=[row["start_lng"], row["end_lng"]],
+            mode="lines",
+            line=dict(width=1 + 4 * opacity, color="blue"),
+            showlegend=False,
+            hovertext=f"{row['start_station_name']} --> {row['end_station_name']}<br>Total rides: {row['ride_count']}"
+        ))
+
+    fig_all.update_layout(title='Most Common Short Distance Routes', map=dict(zoom=1),
+                          height=1200,
+                          width=2000)
+    fig_all.show()
 
 #highest avg kph for each time of day
 def kph_by_hour():
@@ -347,6 +404,7 @@ func_map = {
 }
 
 def show_functions():
+    print('Available functions:')
     print(list(func_map.keys()))
 
 def run_functions():
@@ -360,11 +418,12 @@ def run_functions():
         elif func_input.strip() in func_map.keys():
             func_map[func_input]()
         else:
-            print("Sorry no function for that!")
-
+            print("Sorry, no function for that!")
 
 show_functions()
 run_functions()
+
+
 
 # find_max_value()
 # find_min_value()
@@ -375,3 +434,5 @@ run_functions()
 #do same map for rides originating in Fenway, Somerville, etc
 #do people ride faster at certain times of the day? on certain days of the week?
 #what stations need more docks based on demand?
+#red sox game
+#celtics game- win vs loss behavior
