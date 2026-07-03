@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+from math import radians, cos, sin, asin, sqrt
 import numpy as np
 from datetime import datetime
 
@@ -225,8 +226,7 @@ def union_square_destination():
 
 #highest speed rides
 def fastest_rides():
-    fastest_rides = df[['rideable_type','start_station_name','end_station_name','time_length','distance','kph']]
-    fastest_rides = fastest_rides.sort_values('kph', ascending=False).head(10)
+    fastest_rides = df.sort_values('kph', ascending=False).head(10)
     print(f"What are the 10 fastest rides by kph in May 2025?\n{fastest_rides}")
     question_break()
 
@@ -253,7 +253,7 @@ def common_end_stations_by_hour():
                              width=800,
                              title=f"Most Common End Stations for Hour {x}")
         # https://plotly.com/python-api-reference/generated/plotly.express.scatter_map.html
-        fig.show()
+        #fig.show()
 '''
 geo_center_latitudes = []
 geo_center_longitudes = []
@@ -376,12 +376,11 @@ def kph_by_hour():
 def fastest_routes():
     question_break()
     remove_rare_routes_kph = df[
-        df.groupby(['start_station_name', 'end_station_name','start_lat','start_lng','end_lat','end_lng'])['start_station_name'].transform('count') >= 20]
-    remove_rare_routes_kph = remove_rare_routes_kph.groupby(['start_station_name', 'end_station_name','start_lat','start_lng','end_lat','end_lng'])['kph'].agg(
+        df.groupby(['start_station_name', 'end_station_name'])['start_station_name'].transform('count') >= 20]
+    remove_rare_routes_kph = remove_rare_routes_kph.groupby(['start_station_name', 'end_station_name'])['kph'].agg(
         ['mean', 'count']).sort_values(by=['mean'], ascending=False)
     top10_avg_duration = remove_rare_routes_kph.head(10)
     print(f"What are the 10 fastest routes by average kph in May 2025? (at least 20 rides)\n{top10_avg_duration}")
-
 
 func_map = {
     'classic_vs_electric': classic_vs_electric,
@@ -410,7 +409,6 @@ def show_functions():
 
 def run_functions():
     while True:
-        show_functions()
         func_input = input('Enter one of the functions listed above, or type "exit" to end: ')
 
         if func_input.strip() == 'exit':
@@ -419,10 +417,10 @@ def run_functions():
 
         elif func_input.strip() in func_map.keys():
             func_map[func_input]()
-            continue
         else:
             print("Sorry, no function for that!")
 
+show_functions()
 run_functions()
 
 
@@ -438,4 +436,3 @@ run_functions()
 #what stations need more docks based on demand?
 #red sox game
 #celtics game- win vs loss behavior
-#test
