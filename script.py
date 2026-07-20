@@ -1,6 +1,7 @@
 import pandas as pd
 import plotly.express as px
 import plotly.graph_objects as go
+import sys
 from math import radians, cos, sin, asin, sqrt
 import numpy as np
 from datetime import datetime
@@ -9,7 +10,12 @@ from datetime import datetime
 pd.set_option('display.max_columns', None)
 pd.set_option('display.width', 1000)
 
-df = pd.read_csv('/Users/benjamingillingham/Desktop/blue_bikes_project/202505-bluebikes-tripdata.csv', sep=',')
+try:
+    df = pd.read_csv('202505-bluebikes-tripdata.csv', sep=',')
+except FileNotFoundError:
+    print('The file was not found. Please make sure the CSV is in the same working directory as this script.\nThe CSV can be found here: https://s3.amazonaws.com/hubway-data/index.html')
+    sys.exit(1)
+
 df['started_at'] = pd.to_datetime(df['started_at'])
 df['ended_at'] = pd.to_datetime(df['ended_at'])
 df['time_length'] = df['ended_at'] - df['started_at']
